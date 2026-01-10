@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Recommendations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            warm: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    const DUMMY_DATA = [
+      {
+        id: 1,
+        name: 'The Italian Place',
+        website: 'https://example.com/italian',
+        city: 'San Francisco',
+        neighborhood: 'North Beach',
+        cuisineType: 'Italian',
+        whatYouLove: 'Authentic pasta and cozy atmosphere. The homemade tiramisu is incredible!',
+        mustHave: 'Carbonara, Truffle Risotto',
+        reservationNeeded: 'Yes',
+        planningTimeframe: '1 week in advance',
+      },
+      {
+        id: 2,
+        name: 'Sakura Sushi',
+        website: 'https://example.com/sakura',
+        city: 'San Francisco',
+        neighborhood: 'Japantown',
+        cuisineType: 'Japanese',
+        whatYouLove: 'Freshest fish in the city. The chef is a true master of his craft.',
+        mustHave: 'Omakase, Salmon Belly',
+        reservationNeeded: 'Yes',
+        planningTimeframe: '2 weeks in advance',
+      },
+      {
+        id: 3,
+        name: 'Taco Loco',
+        website: 'https://example.com/tacoloco',
+        city: 'Oakland',
+        neighborhood: 'Fruitvale',
+        cuisineType: 'Mexican',
+        whatYouLove: 'Best street tacos outside of Mexico. Amazing salsa bar!',
+        mustHave: 'Al Pastor Tacos, Horchata',
+        reservationNeeded: 'No',
+        planningTimeframe: 'Walk-in friendly',
+      },
+      {
+        id: 4,
+        name: 'Le Petit Bistro',
+        website: 'https://example.com/lepetit',
+        city: 'San Francisco',
+        neighborhood: 'Hayes Valley',
+        cuisineType: 'French',
+        whatYouLove: 'Romantic setting with classic French cuisine. Perfect for date night.',
+        mustHave: 'Duck Confit, Crème Brûlée',
+        reservationNeeded: 'Yes',
+        planningTimeframe: '3-5 days in advance',
+      },
+      {
+        id: 5,
+        name: 'Golden Dragon',
+        website: 'https://example.com/goldendragon',
+        city: 'San Francisco',
+        neighborhood: 'Chinatown',
+        cuisineType: 'Chinese',
+        whatYouLove: 'Dim sum that rivals Hong Kong. Weekend brunch is a must!',
+        mustHave: 'Har Gow, Char Siu Bao',
+        reservationNeeded: 'No',
+        planningTimeframe: 'Walk-in (expect a wait on weekends)',
+      },
+      {
+        id: 6,
+        name: 'Mumbai Masala',
+        website: 'https://example.com/mumbai',
+        city: 'Oakland',
+        neighborhood: 'Temescal',
+        cuisineType: 'Indian',
+        whatYouLove: 'Authentic flavors with the perfect level of spice. Great vegetarian options.',
+        mustHave: 'Butter Chicken, Garlic Naan',
+        reservationNeeded: 'No',
+        planningTimeframe: 'Walk-in friendly',
+      },
+      {
+        id: 7,
+        name: 'The Smokehouse',
+        website: 'https://example.com/smokehouse',
+        city: 'Berkeley',
+        neighborhood: 'Downtown',
+        cuisineType: 'BBQ',
+        whatYouLove: 'Low and slow smoked meats. The brisket melts in your mouth.',
+        mustHave: 'Brisket, Mac and Cheese',
+        reservationNeeded: 'No',
+        planningTimeframe: 'Walk-in (get there early, they sell out!)',
+      },
+      {
+        id: 8,
+        name: 'Olive & Thyme',
+        website: 'https://example.com/olivethyme',
+        city: 'San Francisco',
+        neighborhood: 'Mission',
+        cuisineType: 'Mediterranean',
+        whatYouLove: 'Fresh ingredients and beautiful presentation. Great for groups.',
+        mustHave: 'Mezze Platter, Lamb Kebabs',
+        reservationNeeded: 'Yes',
+        planningTimeframe: '2-3 days in advance',
+      },
+    ];
+
+    let restaurants = [...DUMMY_DATA];
+    let filters = {
+      name: '',
+      city: '',
+      neighborhood: '',
+      cuisineType: '',
+      reservationNeeded: '',
+    };
+    let selectedRestaurant = null;
+    let isModalOpen = false;
+
+    function getUniqueValues(key) {
+      return [...new Set(restaurants.map(r => r[key]).filter(Boolean))].sort();
+    }
+
+    function filterRestaurants() {
+      return restaurants.filter((restaurant) => {
+        if (filters.name && restaurant.name !== filters.name) return false;
+        if (filters.city && restaurant.city !== filters.city) return false;
+        if (filters.neighborhood && restaurant.neighborhood !== filters.neighborhood) return false;
+        if (filters.cuisineType && restaurant.cuisineType !== filters.cuisineType) return false;
+        if (filters.reservationNeeded && restaurant.reservationNeeded !== filters.reservationNeeded) return false;
+        return true;
+      });
+    }
+
+    function handleFilterChange(filterType, value) {
+      filters[filterType] = value;
+      render();
+    }
+
+    function handleRestaurantClick(restaurantId) {
+      selectedRestaurant = restaurants.find(r => r.id === restaurantId);
+      isModalOpen = true;
+      render();
+    }
+
+    function handleCloseModal() {
+      isModalOpen = false;
+      selectedRestaurant = null;
+      render();
+    }
+
+    function renderFilterBar() {
+      const cities = getUniqueValues('city');
+      const neighborhoods = getUniqueValues('neighborhood');
+      const cuisineTypes = getUniqueValues('cuisineType');
+      const reservationOptions = getUniqueValues('reservationNeeded');
+      const restaurantNames = restaurants.map(r => r.name).sort();
+
+      return `
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Filter Restaurants</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label for="name-filter" class="block text-sm font-medium text-gray-700 mb-2">
+                Restaurant Name
+              </label>
+              <select
+                id="name-filter"
+                onchange="handleFilterChange('name', this.value)"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-warm-500 focus:border-warm-500"
+              >
+                <option value="">All Restaurants</option>
+                ${restaurantNames.map(name => `
+                  <option value="${name}" ${filters.name === name ? 'selected' : ''}>${name}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label for="city-filter" class="block text-sm font-medium text-gray-700 mb-2">
+                City
+              </label>
+              <select
+                id="city-filter"
+                onchange="handleFilterChange('city', this.value)"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-warm-500 focus:border-warm-500"
+              >
+                <option value="">All Cities</option>
+                ${cities.map(city => `
+                  <option value="${city}" ${filters.city === city ? 'selected' : ''}>${city}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label for="neighborhood-filter" class="block text-sm font-medium text-gray-700 mb-2">
+                Neighborhood
+              </label>
+              <select
+                id="neighborhood-filter"
+                onchange="handleFilterChange('neighborhood', this.value)"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-warm-500 focus:border-warm-500"
+              >
+                <option value="">All Neighborhoods</option>
+                ${neighborhoods.map(neighborhood => `
+                  <option value="${neighborhood}" ${filters.neighborhood === neighborhood ? 'selected' : ''}>${neighborhood}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label for="cuisine-filter" class="block text-sm font-medium text-gray-700 mb-2">
+                Cuisine Type
+              </label>
+              <select
+                id="cuisine-filter"
+                onchange="handleFilterChange('cuisineType', this.value)"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-warm-500 focus:border-warm-500"
+              >
+                <option value="">All Cuisines</option>
+                ${cuisineTypes.map(cuisine => `
+                  <option value="${cuisine}" ${filters.cuisineType === cuisine ? 'selected' : ''}>${cuisine}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label for="reservation-filter" class="block text-sm font-medium text-gray-700 mb-2">
+                Reservation Needed
+              </label>
+              <select
+                id="reservation-filter"
+                onchange="handleFilterChange('reservationNeeded', this.value)"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-warm-500 focus:border-warm-500"
+              >
+                <option value="">All</option>
+                ${reservationOptions.map(option => `
+                  <option value="${option}" ${filters.reservationNeeded === option ? 'selected' : ''}>${option}</option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRestaurantCard(restaurant) {
+      return `
+        <div
+          onclick="handleRestaurantClick(${restaurant.id})"
+          class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer overflow-hidden border border-gray-100"
+        >
+          <div class="p-6">
+            <h3 class="text-xl font-semibold text-gray-800 mb-3 hover:text-warm-600 transition-colors">
+              ${restaurant.name}
+            </h3>
+            
+            <div class="flex flex-wrap gap-2 mb-3">
+              ${restaurant.city ? `
+                <span class="px-3 py-1 bg-warm-200 text-warm-800 rounded-full text-sm font-medium">
+                  ${restaurant.city}
+                </span>
+              ` : ''}
+              ${restaurant.neighborhood ? `
+                <span class="px-3 py-1 bg-warm-100 text-warm-700 rounded-full text-sm font-medium">
+                  ${restaurant.neighborhood}
+                </span>
+              ` : ''}
+              ${restaurant.cuisineType ? `
+                <span class="px-3 py-1 bg-warm-50 text-warm-600 rounded-full text-sm font-medium">
+                  ${restaurant.cuisineType}
+                </span>
+              ` : ''}
+            </div>
+
+            ${restaurant.reservationNeeded ? `
+              <div class="mt-3 pt-3 border-t border-gray-100">
+                <span class="text-sm text-gray-600">
+                  <span class="font-medium">Reservation:</span> ${restaurant.reservationNeeded}
+                </span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRestaurantList(filteredRestaurants) {
+      if (filteredRestaurants.length === 0) {
+        return `
+          <div class="text-center py-12">
+            <p class="text-gray-500 text-lg">No restaurants match your filters.</p>
+            <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria.</p>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${filteredRestaurants.map(restaurant => renderRestaurantCard(restaurant)).join('')}
+        </div>
+      `;
+    }
+
+    function renderModal() {
+      if (!isModalOpen || !selectedRestaurant) return '';
+
+      const r = selectedRestaurant;
+      return `
+        <div
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onclick="handleCloseModal()"
+        >
+          <div
+            class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onclick="event.stopPropagation()"
+          >
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h2 class="text-2xl font-bold text-gray-800">${r.name}</h2>
+              <button
+                onclick="handleCloseModal()"
+                class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+              ${r.website ? `
+                <div>
+                  <a
+                    href="${r.website}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-warm-600 hover:text-warm-700 font-medium underline inline-flex items-center gap-2"
+                  >
+                    Visit Website
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              ` : ''}
+
+              <div class="flex flex-wrap gap-2">
+                ${r.city ? `
+                  <span class="px-3 py-1 bg-warm-200 text-warm-800 rounded-full text-sm font-medium">
+                    ${r.city}
+                  </span>
+                ` : ''}
+                ${r.neighborhood ? `
+                  <span class="px-3 py-1 bg-warm-100 text-warm-700 rounded-full text-sm font-medium">
+                    ${r.neighborhood}
+                  </span>
+                ` : ''}
+                ${r.cuisineType ? `
+                  <span class="px-3 py-1 bg-warm-50 text-warm-600 rounded-full text-sm font-medium">
+                    ${r.cuisineType}
+                  </span>
+                ` : ''}
+              </div>
+
+              ${r.whatYouLove ? `
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                    What do you love about this place?
+                  </h3>
+                  <p class="text-gray-700 leading-relaxed">${r.whatYouLove}</p>
+                </div>
+              ` : ''}
+
+              ${r.mustHave ? `
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                    Must Have Recommendations
+                  </h3>
+                  <p class="text-gray-700 leading-relaxed">${r.mustHave}</p>
+                </div>
+              ` : ''}
+
+              ${(r.reservationNeeded || r.planningTimeframe) ? `
+                <div class="bg-warm-50 rounded-lg p-4 border border-warm-200">
+                  <h3 class="text-lg font-semibold text-gray-800 mb-3">Reservation Details</h3>
+                  <div class="space-y-2">
+                    ${r.reservationNeeded ? `
+                      <p class="text-gray-700">
+                        <span class="font-medium">Reservation Needed:</span> ${r.reservationNeeded}
+                      </p>
+                    ` : ''}
+                    ${r.planningTimeframe ? `
+                      <p class="text-gray-700">
+                        <span class="font-medium">Planning Timeframe:</span> ${r.planningTimeframe}
+                      </p>
+                    ` : ''}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      const filteredRestaurants = filterRestaurants();
+      const root = document.getElementById('root');
+      
+      root.innerHTML = `
+        <div class="min-h-screen bg-gradient-to-br from-warm-50 to-warm-100">
+          <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <header class="text-center mb-8">
+              <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                Restaurant Recommendations
+              </h1>
+              <p class="text-gray-600">
+                Discover amazing restaurants recommended by friends
+              </p>
+            </header>
+
+            ${renderFilterBar()}
+
+            <div class="mb-4 text-gray-600">
+              Showing ${filteredRestaurants.length} of ${restaurants.length} restaurants
+            </div>
+
+            ${renderRestaurantList(filteredRestaurants)}
+
+            ${renderModal()}
+          </div>
+        </div>
+      `;
+    }
+
+    // Make functions globally accessible
+    window.handleFilterChange = handleFilterChange;
+    window.handleRestaurantClick = handleRestaurantClick;
+    window.handleCloseModal = handleCloseModal;
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset and base styles for proper mobile scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  /* Prevent iOS font size adjustment on orientation change */
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  /* Allow natural scrolling instead of fixed height */
+  overflow-x: hidden;
+  /* Prevent horizontal scroll on mobile */
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Improve touch scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area support for notched devices */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+  .safe-area-top {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+  }
+}
+
+/* Beautiful landscape background */
+.landscape-bg {
+  background: 
+    /* Gradient overlay for depth */
+    linear-gradient(
+      180deg,
+      rgba(255, 183, 94, 0.3) 0%,
+      rgba(255, 154, 139, 0.2) 20%,
+      rgba(147, 197, 253, 0.15) 40%,
+      rgba(167, 243, 208, 0.2) 70%,
+      rgba(110, 231, 183, 0.25) 100%
+    ),
+    /* Sky gradient */
+    linear-gradient(
+      180deg,
+      #87CEEB 0%,
+      #98d5ed 15%,
+      #b8e4f5 30%,
+      #e8f4ea 60%,
+      #d4f0d4 80%,
+      #98d4a0 100%
+    );
+  /* Use scroll instead of fixed for better mobile performance */
+  background-attachment: scroll;
+  background-size: 100% 100%;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Use fixed background only on larger screens with good performance */
+@media (min-width: 768px) and (hover: hover) {
+  .landscape-bg {
+    background-attachment: fixed;
+  }
+}
+
+/* Decorative clouds - hidden on small mobile for performance */
+.landscape-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: 
+    radial-gradient(ellipse 120px 60px at 15% 20%, rgba(255, 255, 255, 0.8) 0%, transparent 70%),
+    radial-gradient(ellipse 180px 80px at 35% 15%, rgba(255, 255, 255, 0.7) 0%, transparent 70%),
+    radial-gradient(ellipse 150px 70px at 75% 25%, rgba(255, 255, 255, 0.75) 0%, transparent 70%),
+    radial-gradient(ellipse 100px 50px at 85% 10%, rgba(255, 255, 255, 0.6) 0%, transparent 70%),
+    radial-gradient(ellipse 200px 90px at 55% 8%, rgba(255, 255, 255, 0.65) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  /* Hide decorative elements on very small screens */
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .landscape-bg::before {
+    display: block;
+  }
+}
+
+/* Mountain silhouettes - simplified on mobile */
+.landscape-bg::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  background: 
+    linear-gradient(150deg, transparent 55%, rgba(101, 163, 113, 0.3) 55%, rgba(101, 163, 113, 0.3) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (min-width: 640px) {
+  .landscape-bg::after {
+    height: 35%;
+    background: 
+      /* Far mountains */
+      linear-gradient(135deg, transparent 40%, rgba(139, 195, 148, 0.4) 40%, rgba(139, 195, 148, 0.4) 45%, transparent 45%),
+      linear-gradient(125deg, transparent 50%, rgba(120, 180, 130, 0.35) 50%, rgba(120, 180, 130, 0.35) 60%, transparent 60%),
+      linear-gradient(145deg, transparent 30%, rgba(150, 200, 160, 0.3) 30%, rgba(150, 200, 160, 0.3) 38%, transparent 38%),
+      /* Near hills */
+      linear-gradient(150deg, transparent 55%, rgba(101, 163, 113, 0.5) 55%, rgba(101, 163, 113, 0.5) 100%),
+      linear-gradient(160deg, transparent 65%, rgba(82, 145, 95, 0.45) 65%, rgba(82, 145, 95, 0.45) 100%);
+  }
+}
+
+/* Glassmorphism card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Header glass effect */
+.glass-header {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Elegant heading font */
+.heading-elegant {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Sun glow effect - hidden on mobile for performance */
+.sun-glow {
+  position: fixed;
+  top: 5%;
+  right: 15%;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(255, 220, 100, 0.8) 0%, rgba(255, 180, 80, 0.4) 40%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  /* Disable animation on mobile for better performance */
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .sun-glow {
+    display: block;
+    width: 120px;
+    height: 120px;
+    animation: pulse-glow 4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* Content layer */
+.content-layer {
+  position: relative;
+  z-index: 1;
+}
+
+/* Floating animation for decorative elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Birds animation - hidden on mobile for performance */
+.birds {
+  position: fixed;
+  top: 12%;
+  left: 20%;
+  font-size: 1.5rem;
+  color: rgba(75, 85, 99, 0.4);
+  pointer-events: none;
+  z-index: 0;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .birds {
+    display: block;
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .birds::after {
+    content: '🕊️';
+    position: absolute;
+    left: 80px;
+    top: 15px;
+    font-size: 1rem;
+    animation: float 5s ease-in-out infinite 0.5s;
+  }
+}
+
+/* Modal scrolling fixes for mobile */
+.modal-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Touch target minimum size for accessibility */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smooth transitions that respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .sun-glow,
+  .birds {
+    display: none !important;
+  }
+}
+
