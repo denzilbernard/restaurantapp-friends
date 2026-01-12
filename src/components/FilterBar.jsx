@@ -25,10 +25,15 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
   }, [allRecommendations])
 
   const neighborhoods = useMemo(() => {
-    // Filter recommendations by selected city if a city filter is active
-    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
-    let filteredRecommendations = normalizedCityFilter
-      ? allRecommendations.filter(r => normalizeCity(r.city) === normalizedCityFilter)
+    // Filter recommendations by selected cities if city filters are active
+    const normalizedCityFilters = filters.city && filters.city.length > 0
+      ? filters.city.map(city => normalizeCity(city)).filter(Boolean)
+      : []
+    let filteredRecommendations = normalizedCityFilters.length > 0
+      ? allRecommendations.filter(r => {
+          const normalizedRestaurantCity = normalizeCity(r.city)
+          return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+        })
       : allRecommendations
     
     // Further filter by selected cuisine types if any
@@ -64,10 +69,15 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
   }, [allRecommendations, filters.city, filters.cuisineType])
 
   const cuisineTypes = useMemo(() => {
-    // Filter recommendations by selected city if a city filter is active
-    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
-    let filteredRecommendations = normalizedCityFilter
-      ? allRecommendations.filter(r => normalizeCity(r.city) === normalizedCityFilter)
+    // Filter recommendations by selected cities if city filters are active
+    const normalizedCityFilters = filters.city && filters.city.length > 0
+      ? filters.city.map(city => normalizeCity(city)).filter(Boolean)
+      : []
+    let filteredRecommendations = normalizedCityFilters.length > 0
+      ? allRecommendations.filter(r => {
+          const normalizedRestaurantCity = normalizeCity(r.city)
+          return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+        })
       : allRecommendations
     
     // Further filter by selected neighborhoods if any
@@ -103,11 +113,16 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
   }, [allRecommendations, filters.city, filters.neighborhood])
 
   const restaurantNames = useMemo(() => {
-    // Filter restaurants by selected city if a city filter is active
-    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
-    const filteredRestaurants = normalizedCityFilter
+    // Filter restaurants by selected cities if city filters are active
+    const normalizedCityFilters = filters.city && filters.city.length > 0
+      ? filters.city.map(city => normalizeCity(city)).filter(Boolean)
+      : []
+    const filteredRestaurants = normalizedCityFilters.length > 0
       ? restaurants.filter(group => 
-          group.recommendations.some(r => normalizeCity(r.city) === normalizedCityFilter)
+          group.recommendations.some(r => {
+            const normalizedRestaurantCity = normalizeCity(r.city)
+            return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+          })
         )
       : restaurants
     
@@ -124,10 +139,15 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
   ]
 
   const reservationOptions = useMemo(() => {
-    // Filter recommendations by selected city if a city filter is active
-    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
-    const filteredRecommendations = normalizedCityFilter
-      ? allRecommendations.filter(r => normalizeCity(r.city) === normalizedCityFilter)
+    // Filter recommendations by selected cities if city filters are active
+    const normalizedCityFilters = filters.city && filters.city.length > 0
+      ? filters.city.map(city => normalizeCity(city)).filter(Boolean)
+      : []
+    const filteredRecommendations = normalizedCityFilters.length > 0
+      ? allRecommendations.filter(r => {
+          const normalizedRestaurantCity = normalizeCity(r.city)
+          return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+        })
       : allRecommendations
     
     // Get unique reservation values that exist in the filtered recommendations
@@ -135,16 +155,21 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
     
     // Return only the four standard options that exist in the filtered data
     // If no city filter is active, show all four options
-    return normalizedCityFilter
+    return normalizedCityFilters.length > 0
       ? ALL_RESERVATION_OPTIONS.filter(option => existingValues.has(option))
       : ALL_RESERVATION_OPTIONS
   }, [allRecommendations, filters.city])
 
   const priceRanges = useMemo(() => {
-    // Filter recommendations by selected city if a city filter is active
-    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
-    let filteredRecommendations = normalizedCityFilter
-      ? allRecommendations.filter(r => normalizeCity(r.city) === normalizedCityFilter)
+    // Filter recommendations by selected cities if city filters are active
+    const normalizedCityFilters = filters.city && filters.city.length > 0
+      ? filters.city.map(city => normalizeCity(city)).filter(Boolean)
+      : []
+    let filteredRecommendations = normalizedCityFilters.length > 0
+      ? allRecommendations.filter(r => {
+          const normalizedRestaurantCity = normalizeCity(r.city)
+          return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+        })
       : allRecommendations
     
     // Further filter by selected cuisine types if any
@@ -211,24 +236,16 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
         )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-5 relative">
-        {/* City Filter */}
+        {/* City Filter - Multi-select */}
         <div>
-          <label htmlFor="city-filter" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1.5 sm:mb-2">
-            City
-          </label>
-          <select
+          <MultiSelect
             id="city-filter"
-            value={filters.city || ''}
-            onChange={(e) => onFilterChange('city', e.target.value)}
-            className="w-full px-3 sm:px-4 py-3 sm:py-2.5 border border-white/50 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-white/70 backdrop-blur-sm text-gray-700 transition-all hover:bg-white/90 text-base touch-target"
-          >
-            <option value="">All Cities</option>
-            {cities.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
+            label="City"
+            options={cities}
+            selectedValues={filters.city || []}
+            onChange={(values) => onFilterChange('city', values)}
+            placeholder="All Cities"
+          />
         </div>
 
         {/* Restaurant Name Filter */}

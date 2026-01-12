@@ -37,7 +37,7 @@ function App() {
   const { data: restaurants, loading, error } = useSheetData()
   const [filters, setFilters] = useState({
     name: '',
-    city: '',
+    city: [],
     neighborhood: [],
     cuisineType: [],
     reservationNeeded: '',
@@ -65,16 +65,21 @@ function App() {
 
   // Filter restaurants based on current filters
   const filteredRestaurants = useMemo(() => {
-    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
+    // Normalize selected cities for comparison
+    const normalizedCityFilters = filters.city && filters.city.length > 0
+      ? filters.city.map(city => normalizeCity(city)).filter(Boolean)
+      : []
     
     const filtered = groupedRestaurants.filter((group) => {
       // Check if any recommendation in the group matches the filters
       return group.recommendations.some((restaurant) => {
         if (filters.name && restaurant.name !== filters.name) return false
-        // Normalize restaurant city for comparison to ensure consistency
-        if (normalizedCityFilter) {
+        // Handle multi-select city filter
+        if (normalizedCityFilters.length > 0) {
           const normalizedRestaurantCity = normalizeCity(restaurant.city)
-          if (normalizedRestaurantCity !== normalizedCityFilter) return false
+          if (!normalizedRestaurantCity || !normalizedCityFilters.includes(normalizedRestaurantCity)) {
+            return false
+          }
         }
         
         // Handle multi-select neighborhood filter
@@ -130,17 +135,21 @@ function App() {
 
   // Get neighborhoods available for a specific city and/or cuisine types
   const getNeighborhoodsForCityAndCuisines = (cityFilter, selectedCuisines = []) => {
-    const normalizedCityFilter = cityFilter ? normalizeCity(cityFilter) : ''
+    // Normalize selected cities for comparison
+    const normalizedCityFilters = cityFilter && cityFilter.length > 0
+      ? cityFilter.map(city => normalizeCity(city)).filter(Boolean)
+      : []
     const allRecommendations = groupedRestaurants.flatMap(group => group.recommendations || [group])
     
     // Start with all recommendations
     let filteredRecommendations = allRecommendations
     
-    // Filter by city if specified
-    if (normalizedCityFilter) {
-      filteredRecommendations = filteredRecommendations.filter(r => 
-        normalizeCity(r.city) === normalizedCityFilter
-      )
+    // Filter by cities if specified
+    if (normalizedCityFilters.length > 0) {
+      filteredRecommendations = filteredRecommendations.filter(r => {
+        const normalizedRestaurantCity = normalizeCity(r.city)
+        return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+      })
     }
     
     // Further filter by cuisine types if any are selected
@@ -176,17 +185,21 @@ function App() {
 
   // Get cuisine types available for a specific city and/or neighborhoods
   const getCuisinesForCityAndNeighborhoods = (cityFilter, selectedNeighborhoods = []) => {
-    const normalizedCityFilter = cityFilter ? normalizeCity(cityFilter) : ''
+    // Normalize selected cities for comparison
+    const normalizedCityFilters = cityFilter && cityFilter.length > 0
+      ? cityFilter.map(city => normalizeCity(city)).filter(Boolean)
+      : []
     const allRecommendations = groupedRestaurants.flatMap(group => group.recommendations || [group])
     
     // Start with all recommendations
     let filteredRecommendations = allRecommendations
     
-    // Filter by city if specified
-    if (normalizedCityFilter) {
-      filteredRecommendations = filteredRecommendations.filter(r => 
-        normalizeCity(r.city) === normalizedCityFilter
-      )
+    // Filter by cities if specified
+    if (normalizedCityFilters.length > 0) {
+      filteredRecommendations = filteredRecommendations.filter(r => {
+        const normalizedRestaurantCity = normalizeCity(r.city)
+        return normalizedRestaurantCity && normalizedCityFilters.includes(normalizedRestaurantCity)
+      })
     }
     
     // Further filter by neighborhoods if any are selected
