@@ -96,8 +96,9 @@ export default function AdminUpload() {
   const [success, setSuccess] = useState(false)
   const [existingCount, setExistingCount] = useState(0)
   const [detectedColumns, setDetectedColumns] = useState([])
+  const [csvFileInfo, setCsvFileInfo] = useState(null)
 
-  // Check for existing data on mount
+  // Check for existing data and load CSV file info on mount
   useEffect(() => {
     const existing = localStorage.getItem('restaurantData')
     if (existing) {
@@ -108,6 +109,40 @@ export default function AdminUpload() {
         console.error('Error parsing existing data:', e)
       }
     }
+
+    // Load CSV file info
+    fetch('/sample-restaurants.csv')
+      .then(response => {
+        if (response.ok) {
+          return response.text()
+        }
+        throw new Error('CSV file not found')
+      })
+      .then(csvText => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const restaurantCount = results.data.filter(row => {
+              const name = row['Restaurant Name'] || row['Restaurant name'] || ''
+              return name.trim() !== ''
+            }).length
+            
+            setCsvFileInfo({
+              fileName: 'sample-restaurants.csv',
+              restaurantCount: restaurantCount,
+              totalRows: results.data.length,
+              lastUpdated: 'Built-in CSV file'
+            })
+          },
+          error: (error) => {
+            console.error('Error parsing CSV for info:', error)
+          }
+        })
+      })
+      .catch(err => {
+        console.log('Could not load CSV file info:', err)
+      })
   }, [])
 
   const handleFile = useCallback((file) => {
@@ -252,6 +287,27 @@ export default function AdminUpload() {
           </div>
         </header>
 
+        {/* CSV File Info Banner */}
+        {csvFileInfo && (
+          <div className="bg-emerald-900/50 border border-emerald-700 rounded-lg p-4 mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-emerald-200 font-medium mb-1">
+                  📄 Current CSV File
+                </p>
+                <div className="text-emerald-300 text-sm space-y-1">
+                  <p><span className="font-medium">File:</span> {csvFileInfo.fileName}</p>
+                  <p><span className="font-medium">Restaurants:</span> {csvFileInfo.restaurantCount}</p>
+                  <p><span className="font-medium">Source:</span> {csvFileInfo.lastUpdated}</p>
+                </div>
+              </div>
+              <div className="text-emerald-400 text-xs">
+                This is the CSV file that loads when no data is uploaded via localStorage
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Status Banner */}
         {existingCount > 0 && (
           <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4 mb-6 flex justify-between items-center">
@@ -260,7 +316,7 @@ export default function AdminUpload() {
                 Current Data Status
               </p>
               <p className="text-blue-300 text-sm mt-1">
-                {existingCount} restaurants currently loaded
+                {existingCount} restaurants currently loaded in localStorage
               </p>
             </div>
             <div className="flex gap-2">
