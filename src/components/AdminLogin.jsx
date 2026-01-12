@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 // Simple admin password - in production, use proper authentication
-const ADMIN_PASSWORD = 'admin123'
+const ADMIN_PASSWORD = 'dmb123'
 
 export default function AdminLogin({ onLogin }) {
   const [password, setPassword] = useState('')
