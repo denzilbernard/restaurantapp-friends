@@ -41,12 +41,16 @@ function App() {
     neighborhood: [],
     cuisineType: [],
     reservationNeeded: '',
+    priceRange: [],
   })
   const [selectedRestaurant, setSelectedRestaurant] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Group restaurants by name first
   const groupedRestaurants = useMemo(() => {
+    if (!restaurants || !Array.isArray(restaurants)) {
+      return []
+    }
     return groupRestaurantsByName(restaurants)
   }, [restaurants])
 
@@ -97,6 +101,12 @@ function App() {
         }
         
         if (filters.reservationNeeded && restaurant.reservationNeeded !== filters.reservationNeeded) return false
+        
+        // Handle multi-select price range filter
+        if (filters.priceRange && filters.priceRange.length > 0) {
+          if (!restaurant.priceRange || !filters.priceRange.includes(restaurant.priceRange)) return false
+        }
+        
         return true
       })
     })
@@ -109,16 +119,40 @@ function App() {
     })
   }, [groupedRestaurants, filters])
 
-  // Get neighborhoods available for a specific city
-  const getNeighborhoodsForCity = (cityFilter) => {
+  // Get neighborhoods available for a specific city and/or cuisine types
+  const getNeighborhoodsForCityAndCuisines = (cityFilter, selectedCuisines = []) => {
     const normalizedCityFilter = cityFilter ? normalizeCity(cityFilter) : ''
     const allRecommendations = groupedRestaurants.flatMap(group => group.recommendations || [group])
     
-    if (!normalizedCityFilter) return []
+    // Start with all recommendations
+    let filteredRecommendations = allRecommendations
     
-    const filteredRecommendations = allRecommendations.filter(r => 
-      normalizeCity(r.city) === normalizedCityFilter
-    )
+    // Filter by city if specified
+    if (normalizedCityFilter) {
+      filteredRecommendations = filteredRecommendations.filter(r => 
+        normalizeCity(r.city) === normalizedCityFilter
+      )
+    }
+    
+    // Further filter by cuisine types if any are selected
+    if (selectedCuisines && selectedCuisines.length > 0) {
+      filteredRecommendations = filteredRecommendations.filter(r => {
+        if (!r.cuisineType) return false
+        const restaurantCuisines = r.cuisineType.split(/[,/]/).map(c => c.trim()).filter(Boolean)
+        // Use areSimilar for matching to handle deduplicated values and case differences
+        return selectedCuisines.some(selectedCuisine => {
+          if (!selectedCuisine) return false
+          return restaurantCuisines.some(restaurantCuisine => {
+            // First try exact match (case-insensitive)
+            if (selectedCuisine.toLowerCase() === restaurantCuisine.toLowerCase()) {
+              return true
+            }
+            // Then try similarity matching for typos/variations
+            return areSimilar(selectedCuisine, restaurantCuisine)
+          })
+        })
+      })
+    }
     
     const neighborhoods = new Set()
     filteredRecommendations.forEach(r => {
@@ -148,11 +182,21 @@ function App() {
     
     // Further filter by neighborhoods if any are selected
     if (selectedNeighborhoods && selectedNeighborhoods.length > 0) {
-      const selectedNeighborhoodsLower = selectedNeighborhoods.map(n => n.toLowerCase())
       filteredRecommendations = filteredRecommendations.filter(r => {
         if (!r.neighborhood) return false
-        const restaurantNeighborhoods = r.neighborhood.split(/[,/]/).map(n => n.trim().toLowerCase())
-        return restaurantNeighborhoods.some(n => selectedNeighborhoodsLower.includes(n))
+        const restaurantNeighborhoods = r.neighborhood.split(/[,/]/).map(n => n.trim()).filter(Boolean)
+        // Use areSimilar for matching to handle deduplicated values and case differences
+        return selectedNeighborhoods.some(selectedNeighborhood => {
+          if (!selectedNeighborhood) return false
+          return restaurantNeighborhoods.some(restaurantNeighborhood => {
+            // First try exact match (case-insensitive)
+            if (selectedNeighborhood.toLowerCase() === restaurantNeighborhood.toLowerCase()) {
+              return true
+            }
+            // Then try similarity matching for typos/variations
+            return areSimilar(selectedNeighborhood, restaurantNeighborhood)
+          })
+        })
       })
     }
     
@@ -171,24 +215,11 @@ function App() {
     setFilters((prev) => {
       const newFilters = { ...prev, [filterType]: value }
       
-      // When city changes, clear downstream filters that are no longer valid
+      // When city changes, clear both neighborhood and cuisine type selections
       if (filterType === 'city') {
-        if (value) {
-          // Clear neighborhood selections that don't exist in the new city
-          const validNeighborhoods = getNeighborhoodsForCity(value)
-          const filteredNeighborhoods = (prev.neighborhood || []).filter(n => 
-            validNeighborhoods.has(n.toLowerCase())
-          )
-          newFilters.neighborhood = filteredNeighborhoods
-          
-          // Clear cuisine type selections that don't exist in the new city (considering filtered neighborhoods)
-          const validCuisines = getCuisinesForCityAndNeighborhoods(value, filteredNeighborhoods)
-          const filteredCuisines = (prev.cuisineType || []).filter(c => 
-            validCuisines.has(c.toLowerCase())
-          )
-          newFilters.cuisineType = filteredCuisines
-        }
-        // When city is cleared (All Cities), keep all selections as they may still be valid
+        // Clear neighborhoods and cuisine types - they will refresh based on new city
+        newFilters.neighborhood = []
+        newFilters.cuisineType = []
       }
       
       // When neighborhoods change, clear cuisine type selections that are no longer valid
@@ -202,6 +233,19 @@ function App() {
           newFilters.cuisineType = filteredCuisines
         }
         // When neighborhoods are cleared, cuisines cascade back to city-level
+      }
+      
+      // When cuisine types change, clear neighborhood selections that are no longer valid
+      if (filterType === 'cuisineType') {
+        if (value && value.length > 0) {
+          // Get neighborhoods available for the current city + new cuisine types
+          const validNeighborhoods = getNeighborhoodsForCityAndCuisines(prev.city, value)
+          const filteredNeighborhoods = (prev.neighborhood || []).filter(n => 
+            validNeighborhoods.has(n.toLowerCase())
+          )
+          newFilters.neighborhood = filteredNeighborhoods
+        }
+        // When cuisines are cleared, neighborhoods cascade back to city-level
       }
       
       return newFilters
@@ -253,7 +297,7 @@ function App() {
             </div>
           )}
 
-          {error && (
+          {error && groupedRestaurants.length === 0 && (
             <div className="glass-card rounded-2xl p-6 mb-6 border-l-4 border-l-red-400">
               <p className="text-red-800 font-semibold">Error loading data</p>
               <p className="text-red-600 text-sm mt-1">{error}</p>
@@ -263,8 +307,17 @@ function App() {
             </div>
           )}
 
-          {!loading && !error && (
+          {/* Show FilterBar and RestaurantList when not loading */}
+          {!loading && (
             <>
+              {error && groupedRestaurants.length > 0 && (
+                <div className="glass-card rounded-2xl p-4 mb-4 border-l-4 border-l-yellow-400">
+                  <p className="text-yellow-800 text-sm">
+                    ⚠️ Showing cached data. Some features may be limited.
+                  </p>
+                </div>
+              )}
+              
               <FilterBar
                 restaurants={groupedRestaurants}
                 filters={filters}

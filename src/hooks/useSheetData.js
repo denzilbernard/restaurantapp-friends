@@ -142,6 +142,22 @@ function getUploadedData() {
   return null
 }
 
+// Helper to find a column value with case-insensitive matching
+function findColumnValue(row, possibleNames) {
+  // First try exact matches
+  for (const name of possibleNames) {
+    if (row[name] !== undefined) return row[name]
+  }
+  // Then try case-insensitive matching
+  const rowKeys = Object.keys(row)
+  for (const name of possibleNames) {
+    const lowerName = name.toLowerCase()
+    const matchingKey = rowKeys.find(key => key.toLowerCase() === lowerName)
+    if (matchingKey && row[matchingKey] !== undefined) return row[matchingKey]
+  }
+  return ''
+}
+
 // Helper to parse a row from CSV
 function parseRestaurantRow(row, index) {
   const rawCity = row['City'] || row['City:'] || ''
@@ -156,6 +172,7 @@ function parseRestaurantRow(row, index) {
     mustHave: row['What is/are your "Must Have" recommendation(s)?'] || row['What are your "Must Have" recommendations"?'] || '',
     reservationNeeded: (row['Reservation needed/required?'] || '').trim(),
     planningTimeframe: row['How far in advance do we need to plan?'] || '',
+    priceRange: row['Price Range'] || row['Pricing Range'] || '',
     // Check for address column in CSV
     address: row['Address'] || row['address'] || row['Location'] || row['location'] || '',
   }
@@ -247,6 +264,26 @@ export function useSheetData() {
     }
 
     fetchData()
+
+    // Listen for storage changes (from other tabs/windows)
+    const handleStorageChange = (e) => {
+      if (e.key === 'restaurantData' || e.key === 'restaurantDataUpdatedAt') {
+        fetchData()
+      }
+    }
+
+    // Listen for custom event (from same tab)
+    const handleDataUpdate = () => {
+      fetchData()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('restaurantDataUpdated', handleDataUpdate)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('restaurantDataUpdated', handleDataUpdate)
+    }
   }, [])
 
   return { data, loading, error }

@@ -86,26 +86,33 @@ export default function MultiSelect({
             </button>
           </div>
           <div role="listbox" className="p-1">
-            {options.map((option) => {
-              const isSelected = selectedValues.includes(option)
-              return (
-                <label
-                  key={option}
-                  role="option"
-                  className={`flex items-center px-3 py-3 sm:py-2 cursor-pointer hover:bg-amber-50 active:bg-amber-100 rounded-lg transition-colors touch-target ${
-                    isSelected ? 'bg-amber-50' : ''
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => handleToggle(option)}
-                    className="h-5 w-5 sm:h-4 sm:w-4 text-amber-600 focus:ring-amber-400 border-gray-300 rounded"
-                  />
-                  <span className="ml-3 text-sm text-gray-700 font-medium">{option}</span>
-                </label>
-              )
-            })}
+            {options.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                No options available
+              </div>
+            ) : (
+              options.map((option) => {
+                const isSelected = selectedValues.includes(option)
+                return (
+                  <label
+                    key={option}
+                    role="option"
+                    className={`flex items-center px-3 py-3 sm:py-2 cursor-pointer hover:bg-amber-50 active:bg-amber-100 rounded-lg transition-colors touch-target ${
+                      isSelected ? 'bg-amber-50' : ''
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggle(option)}
+                      className="h-5 w-5 sm:h-4 sm:w-4 text-amber-600 focus:ring-2 focus:ring-amber-400 focus:ring-offset-0 border-gray-300 rounded cursor-pointer accent-amber-600 flex-shrink-0"
+                      style={{ cursor: 'pointer', minWidth: '1rem', minHeight: '1rem' }}
+                    />
+                    <span className="ml-3 text-sm text-gray-700 font-medium flex-1">{option}</span>
+                  </label>
+                )
+              })
+            )}
           </div>
         </div>
       )}

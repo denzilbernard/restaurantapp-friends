@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import Papa from 'papaparse'
 import { normalizeCity } from '../utils/cityNormalizer'
-import { clearPriceCache, batchLookupPriceRanges } from '../services/priceRangeLookup'
+import { resetApp } from '../utils/resetApp'
 
 // Expected CSV column mappings
 const COLUMN_MAPPINGS = {
@@ -16,25 +16,71 @@ const COLUMN_MAPPINGS = {
   'What is/are your "Must Have" recommendation(s)?': 'mustHave',
   'Reservation needed/required?': 'reservationNeeded',
   'How far in advance do we need to plan?': 'planningTimeframe',
+  'Price Range': 'priceRange',
+  'Pricing Range': 'priceRange',
+}
+
+// Helper to find a column value with flexible matching (exact, case-insensitive, then partial)
+function findColumnValue(row, possibleNames) {
+  // First try exact matches
+  for (const name of possibleNames) {
+    if (row[name] !== undefined && row[name] !== null) {
+      const value = String(row[name]).trim()
+      if (value !== '') {
+        return row[name] // Return original value, not trimmed
+      }
+    }
+  }
+  // Then try case-insensitive matching
+  const rowKeys = Object.keys(row)
+  for (const name of possibleNames) {
+    const lowerName = name.toLowerCase().trim()
+    const matchingKey = rowKeys.find(key => key.toLowerCase().trim() === lowerName)
+    if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null) {
+      const value = String(row[matchingKey]).trim()
+      if (value !== '') {
+        return row[matchingKey] // Return original value
+      }
+    }
+  }
+  return null // Return null instead of empty string to distinguish from empty values
 }
 
 function normalizeRow(row) {
   const normalized = { id: Math.random().toString(36).substr(2, 9) }
   
+  // Handle fields with exact matching first, then fallback to case-insensitive
   for (const [csvColumn, appField] of Object.entries(COLUMN_MAPPINGS)) {
-    if (row[csvColumn] !== undefined && !normalized[appField]) {
-      const value = row[csvColumn]?.trim() || ''
+    
+    let value = null
+    
+    // Try exact match first
+    if (row[csvColumn] !== undefined && row[csvColumn] !== null && row[csvColumn] !== '') {
+      value = row[csvColumn]
+    } else {
+      // Try case-insensitive match
+      const rowKeys = Object.keys(row)
+      const lowerColumn = csvColumn.toLowerCase().trim()
+      const matchingKey = rowKeys.find(key => key.toLowerCase().trim() === lowerColumn)
+      if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== null && row[matchingKey] !== '') {
+        value = row[matchingKey]
+      }
+    }
+    
+    // Only set if we found a value and the field isn't already set
+    if (value !== null && !normalized[appField]) {
+      const trimmedValue = String(value).trim()
       // Normalize city field
       if (appField === 'city') {
-        normalized[appField] = normalizeCity(value)
+        normalized[appField] = normalizeCity(trimmedValue)
       } else {
-        normalized[appField] = value
+        normalized[appField] = trimmedValue
       }
     }
   }
   
   // Ensure all fields exist
-  const fields = ['name', 'website', 'city', 'neighborhood', 'cuisineType', 'whatYouLove', 'mustHave', 'reservationNeeded', 'planningTimeframe']
+  const fields = ['name', 'website', 'city', 'neighborhood', 'cuisineType', 'whatYouLove', 'mustHave', 'reservationNeeded', 'planningTimeframe', 'priceRange']
   fields.forEach(field => {
     if (!normalized[field]) normalized[field] = ''
   })
@@ -49,12 +95,9 @@ export default function AdminUpload() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
   const [existingCount, setExistingCount] = useState(0)
-  const [apiKey, setApiKey] = useState('')
-  const [apiKeySaved, setApiKeySaved] = useState(false)
-  const [priceLookupStatus, setPriceLookupStatus] = useState('')
-  const [isLookingUpPrices, setIsLookingUpPrices] = useState(false)
+  const [detectedColumns, setDetectedColumns] = useState([])
 
-  // Check for existing data and API key on mount
+  // Check for existing data on mount
   useEffect(() => {
     const existing = localStorage.getItem('restaurantData')
     if (existing) {
@@ -65,13 +108,6 @@ export default function AdminUpload() {
         console.error('Error parsing existing data:', e)
       }
     }
-    
-    // Load API key if it exists
-    const storedApiKey = localStorage.getItem('googlePlacesApiKey')
-    if (storedApiKey) {
-      setApiKey(storedApiKey)
-      setApiKeySaved(true)
-    }
   }, [])
 
   const handleFile = useCallback((file) => {
@@ -80,6 +116,7 @@ export default function AdminUpload() {
     setError(null)
     setSuccess(false)
     setFileName(file.name)
+    setDetectedColumns([])
 
     if (!file.name.endsWith('.csv')) {
       setError('Please upload a CSV file')
@@ -89,10 +126,21 @@ export default function AdminUpload() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (header) => {
+        // Clean up headers: remove BOM, trim whitespace
+        return header.replace(/^\uFEFF/, '').trim()
+      },
       complete: (results) => {
         if (results.errors.length > 0) {
           setError(`CSV parsing error: ${results.errors[0].message}`)
           return
+        }
+
+        // Log detected columns for debugging
+        if (results.data.length > 0) {
+          const detectedCols = Object.keys(results.data[0])
+          setDetectedColumns(detectedCols)
+          console.log('Detected CSV columns:', detectedCols)
         }
 
         const normalizedData = results.data
@@ -134,43 +182,16 @@ export default function AdminUpload() {
     handleFile(file)
   }, [handleFile])
 
-  const handleSaveData = async () => {
+  const handleSaveData = () => {
     try {
       localStorage.setItem('restaurantData', JSON.stringify(parsedData))
       localStorage.setItem('restaurantDataUpdatedAt', new Date().toISOString())
+      
+      // Dispatch custom event to notify useSheetData hook to refresh
+      window.dispatchEvent(new Event('restaurantDataUpdated'))
+      
       setSuccess(true)
       setExistingCount(parsedData.length)
-      
-      // Automatically trigger price lookup after saving CSV data
-      const storedApiKey = localStorage.getItem('googlePlacesApiKey')
-      if (storedApiKey && storedApiKey.trim()) {
-        setIsLookingUpPrices(true)
-        setPriceLookupStatus(`Starting price lookup for ${parsedData.length} restaurants...`)
-        setError(null)
-
-        try {
-          await batchLookupPriceRanges(parsedData, (current, total) => {
-            setPriceLookupStatus(`Looking up prices: ${current}/${total} restaurants...`)
-          })
-
-          setPriceLookupStatus(`✅ Successfully looked up prices for all restaurants!`)
-          setTimeout(() => {
-            setPriceLookupStatus('')
-          }, 5000)
-        } catch (err) {
-          setPriceLookupStatus(`⚠ Price lookup completed with some errors. Check console for details.`)
-          setTimeout(() => {
-            setPriceLookupStatus('')
-          }, 5000)
-        } finally {
-          setIsLookingUpPrices(false)
-        }
-      } else {
-        setPriceLookupStatus('⚠ Google Places API key not configured. Prices will not be fetched.')
-        setTimeout(() => {
-          setPriceLookupStatus('')
-        }, 5000)
-      }
     } catch (err) {
       setError(`Error saving data: ${err.message}`)
     }
@@ -180,6 +201,10 @@ export default function AdminUpload() {
     if (window.confirm('Are you sure you want to clear all restaurant data?')) {
       localStorage.removeItem('restaurantData')
       localStorage.removeItem('restaurantDataUpdatedAt')
+      
+      // Dispatch custom event to notify useSheetData hook to refresh
+      window.dispatchEvent(new Event('restaurantDataUpdated'))
+      
       setParsedData([])
       setFileName('')
       setExistingCount(0)
@@ -187,87 +212,15 @@ export default function AdminUpload() {
     }
   }
 
+  const handleHardReset = () => {
+    if (window.confirm('⚠️ HARD RESET: This will clear ALL application data including:\n\n- Restaurant data\n- Support messages\n- Admin authentication\n- All cached data\n\nThis action cannot be undone. Continue?')) {
+      resetApp()
+    }
+  }
+
   const handleLogout = () => {
     sessionStorage.removeItem('adminAuthenticated')
     window.location.href = '/admin'
-  }
-
-  const handleSaveApiKey = () => {
-    if (!apiKey.trim()) {
-      setError('Please enter a Google Places API key')
-      return
-    }
-    
-    try {
-      localStorage.setItem('googlePlacesApiKey', apiKey.trim())
-      setApiKeySaved(true)
-      setError(null)
-    } catch (err) {
-      setError(`Error saving API key: ${err.message}`)
-    }
-  }
-
-  const handleClearApiKey = () => {
-    if (window.confirm('Are you sure you want to clear the API key? Price lookups will stop working.')) {
-      localStorage.removeItem('googlePlacesApiKey')
-      setApiKey('')
-      setApiKeySaved(false)
-    }
-  }
-
-  const handleClearPriceCache = () => {
-    if (window.confirm('Are you sure you want to clear the price cache? All price data will need to be fetched again.')) {
-      clearPriceCache()
-      setSuccess(true)
-      setPriceLookupStatus('Price cache cleared. Prices will be fetched on next page load.')
-      setTimeout(() => {
-        setSuccess(false)
-        setPriceLookupStatus('')
-      }, 5000)
-    }
-  }
-
-  const handleTriggerPriceLookup = async () => {
-    const storedApiKey = localStorage.getItem('googlePlacesApiKey')
-    if (!storedApiKey || !storedApiKey.trim()) {
-      setError('Please save your Google Places API key first')
-      return
-    }
-
-    // Get restaurants from localStorage
-    const restaurantData = localStorage.getItem('restaurantData')
-    if (!restaurantData) {
-      setError('No restaurant data found. Please upload data first.')
-      return
-    }
-
-    try {
-      const restaurants = JSON.parse(restaurantData)
-      if (!Array.isArray(restaurants) || restaurants.length === 0) {
-        setError('No restaurants found in data')
-        return
-      }
-
-      setIsLookingUpPrices(true)
-      setPriceLookupStatus(`Starting price lookup for ${restaurants.length} restaurants...`)
-      setError(null)
-
-      await batchLookupPriceRanges(restaurants, (current, total) => {
-        setPriceLookupStatus(`Looking up prices: ${current}/${total} restaurants...`)
-      })
-
-      setPriceLookupStatus(`✅ Successfully looked up prices for all restaurants!`)
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-        setPriceLookupStatus('')
-      }, 5000)
-    } catch (err) {
-      setError(`Error during price lookup: ${err.message}`)
-      setPriceLookupStatus('')
-    } finally {
-      setIsLookingUpPrices(false)
-    }
   }
 
   return (
@@ -299,102 +252,6 @@ export default function AdminUpload() {
           </div>
         </header>
 
-        {/* Google Places API Key Configuration */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Google Places API Configuration</h2>
-          <p className="text-slate-400 text-sm mb-4">
-            Configure your Google Places API key to enable automatic price range lookups for restaurants.
-            Get your API key from{' '}
-            <a 
-              href="https://console.cloud.google.com/google/maps-apis/credentials" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-emerald-400 hover:text-emerald-300 underline"
-            >
-              Google Cloud Console
-            </a>
-            . Make sure to enable the Places API (New) for your project.
-          </p>
-          
-          <div className="flex gap-3 items-start">
-            <div className="flex-1">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => {
-                  setApiKey(e.target.value)
-                  setApiKeySaved(false)
-                }}
-                placeholder="Enter your Google Places API key"
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              {apiKeySaved && (
-                <p className="text-emerald-400 text-sm mt-2 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  API key saved
-                </p>
-              )}
-            </div>
-            <button
-              onClick={handleSaveApiKey}
-              className="px-6 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
-            >
-              Save API Key
-            </button>
-            {apiKeySaved && (
-              <button
-                onClick={handleClearApiKey}
-                className="px-4 py-2 bg-red-600/80 text-white text-sm rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          
-          <div className="mt-4 pt-4 border-t border-slate-700 space-y-3">
-            <div>
-              <button
-                onClick={handleTriggerPriceLookup}
-                disabled={isLookingUpPrices || !apiKeySaved}
-                className={`px-4 py-2 text-white text-sm rounded-lg transition-colors ${
-                  isLookingUpPrices || !apiKeySaved
-                    ? 'bg-slate-600 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {isLookingUpPrices ? 'Looking up prices...' : 'Trigger Price Lookup Now'}
-              </button>
-              <p className="text-slate-500 text-xs mt-2">
-                Manually trigger price lookups for all restaurants in your data
-              </p>
-            </div>
-            
-            <div>
-              <button
-                onClick={handleClearPriceCache}
-                className="px-4 py-2 bg-amber-600/80 text-white text-sm rounded-lg hover:bg-amber-700 transition-colors"
-              >
-                Clear Price Cache
-              </button>
-              <p className="text-slate-500 text-xs mt-2">
-                Clear cached price data to force fresh lookups from Google Places API
-              </p>
-            </div>
-
-            {priceLookupStatus && (
-              <div className={`p-3 rounded-lg text-sm ${
-                priceLookupStatus.includes('✅') 
-                  ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-700'
-                  : 'bg-blue-900/50 text-blue-300 border border-blue-700'
-              }`}>
-                {priceLookupStatus}
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Status Banner */}
         {existingCount > 0 && (
           <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4 mb-6 flex justify-between items-center">
@@ -406,14 +263,36 @@ export default function AdminUpload() {
                 {existingCount} restaurants currently loaded
               </p>
             </div>
-            <button
-              onClick={handleClearData}
-              className="px-4 py-2 bg-red-600/80 text-white text-sm rounded hover:bg-red-700 transition-colors"
-            >
-              Clear All Data
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleClearData}
+                className="px-4 py-2 bg-red-600/80 text-white text-sm rounded hover:bg-red-700 transition-colors"
+              >
+                Clear All Data
+              </button>
+            </div>
           </div>
         )}
+
+        {/* Hard Reset Section */}
+        <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-red-200 font-medium mb-1">
+                ⚠️ Hard Reset Application
+              </p>
+              <p className="text-red-300 text-sm">
+                Clear all stored data including restaurant data, support messages, and admin sessions. This will reload the page.
+              </p>
+            </div>
+            <button
+              onClick={handleHardReset}
+              className="px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+            >
+              Hard Reset
+            </button>
+          </div>
+        </div>
 
         {/* Upload Area */}
         <div
@@ -454,6 +333,16 @@ export default function AdminUpload() {
             </p>
           )}
         </div>
+
+        {/* Debug Info */}
+        {detectedColumns.length > 0 && (
+          <div className="mt-6 bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+            <p className="text-slate-300 font-medium mb-2">CSV Column Detection</p>
+            <div className="text-sm text-slate-400 mb-2">
+              <strong>Detected columns ({detectedColumns.length}):</strong> {detectedColumns.join(', ')}
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -498,6 +387,7 @@ export default function AdminUpload() {
                       <th className="text-left p-3 text-slate-300 font-medium">City</th>
                       <th className="text-left p-3 text-slate-300 font-medium">Neighborhood</th>
                       <th className="text-left p-3 text-slate-300 font-medium">Cuisine</th>
+                      <th className="text-left p-3 text-slate-300 font-medium">Price Range</th>
                       <th className="text-left p-3 text-slate-300 font-medium">Reservation</th>
                     </tr>
                   </thead>
@@ -508,6 +398,7 @@ export default function AdminUpload() {
                         <td className="p-3 text-slate-300">{row.city}</td>
                         <td className="p-3 text-slate-300">{row.neighborhood}</td>
                         <td className="p-3 text-slate-300">{row.cuisineType}</td>
+                        <td className="p-3 text-slate-300">{row.priceRange || '-'}</td>
                         <td className="p-3 text-slate-300">{row.reservationNeeded}</td>
                       </tr>
                     ))}
@@ -540,7 +431,8 @@ export default function AdminUpload() {
               'What do you love about this place?',
               'What are your "Must Have" recommendations"?',
               'Reservation needed/required?',
-              'How far in advance do we need to plan?'
+              'How far in advance do we need to plan?',
+              'Price Range'
             ].map((col) => (
               <div key={col} className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>

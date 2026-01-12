@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App.jsx'
 import AdminPage from './pages/AdminPage.jsx'
 import './index.css'
+import './utils/resetApp' // Make resetApp available globally
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

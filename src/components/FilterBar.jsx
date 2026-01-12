@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { normalizeCity } from '../utils/cityNormalizer'
-import { deduplicateSimilar } from '../utils/deduplicateSimilar'
+import { deduplicateSimilar, areSimilar } from '../utils/deduplicateSimilar'
 import MultiSelect from './MultiSelect'
 
 export default function FilterBar({ restaurants, filters, onFilterChange, filteredCount, totalCount }) {
@@ -27,9 +27,29 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
   const neighborhoods = useMemo(() => {
     // Filter recommendations by selected city if a city filter is active
     const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
-    const filteredRecommendations = normalizedCityFilter
+    let filteredRecommendations = normalizedCityFilter
       ? allRecommendations.filter(r => normalizeCity(r.city) === normalizedCityFilter)
       : allRecommendations
+    
+    // Further filter by selected cuisine types if any
+    if (filters.cuisineType && filters.cuisineType.length > 0) {
+      filteredRecommendations = filteredRecommendations.filter(r => {
+        if (!r.cuisineType) return false
+        const restaurantCuisines = r.cuisineType.split(/[,/]/).map(c => c.trim()).filter(Boolean)
+        // Use areSimilar for matching to handle deduplicated values and case differences
+        return filters.cuisineType.some(selectedCuisine => {
+          if (!selectedCuisine) return false
+          return restaurantCuisines.some(restaurantCuisine => {
+            // First try exact match (case-insensitive)
+            if (selectedCuisine.toLowerCase() === restaurantCuisine.toLowerCase()) {
+              return true
+            }
+            // Then try similarity matching for typos/variations
+            return areSimilar(selectedCuisine, restaurantCuisine)
+          })
+        })
+      })
+    }
     
     // Extract all individual neighborhoods from comma or slash-separated values
     const allNeighborhoods = filteredRecommendations
@@ -41,7 +61,7 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
       })
     // Deduplicate similar entries (e.g., "SoHo" vs "Soho")
     return deduplicateSimilar(allNeighborhoods)
-  }, [allRecommendations, filters.city])
+  }, [allRecommendations, filters.city, filters.cuisineType])
 
   const cuisineTypes = useMemo(() => {
     // Filter recommendations by selected city if a city filter is active
@@ -52,11 +72,21 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
     
     // Further filter by selected neighborhoods if any
     if (filters.neighborhood && filters.neighborhood.length > 0) {
-      const selectedNeighborhoodsLower = filters.neighborhood.map(n => n.toLowerCase())
       filteredRecommendations = filteredRecommendations.filter(r => {
         if (!r.neighborhood) return false
-        const restaurantNeighborhoods = r.neighborhood.split(/[,/]/).map(n => n.trim().toLowerCase())
-        return restaurantNeighborhoods.some(n => selectedNeighborhoodsLower.includes(n))
+        const restaurantNeighborhoods = r.neighborhood.split(/[,/]/).map(n => n.trim()).filter(Boolean)
+        // Use areSimilar for matching to handle deduplicated values and case differences
+        return filters.neighborhood.some(selectedNeighborhood => {
+          if (!selectedNeighborhood) return false
+          return restaurantNeighborhoods.some(restaurantNeighborhood => {
+            // First try exact match (case-insensitive)
+            if (selectedNeighborhood.toLowerCase() === restaurantNeighborhood.toLowerCase()) {
+              return true
+            }
+            // Then try similarity matching for typos/variations
+            return areSimilar(selectedNeighborhood, restaurantNeighborhood)
+          })
+        })
       })
     }
     
@@ -110,6 +140,59 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
       : ALL_RESERVATION_OPTIONS
   }, [allRecommendations, filters.city])
 
+  const priceRanges = useMemo(() => {
+    // Filter recommendations by selected city if a city filter is active
+    const normalizedCityFilter = filters.city ? normalizeCity(filters.city) : ''
+    let filteredRecommendations = normalizedCityFilter
+      ? allRecommendations.filter(r => normalizeCity(r.city) === normalizedCityFilter)
+      : allRecommendations
+    
+    // Further filter by selected cuisine types if any
+    if (filters.cuisineType && filters.cuisineType.length > 0) {
+      filteredRecommendations = filteredRecommendations.filter(r => {
+        if (!r.cuisineType) return false
+        const restaurantCuisines = r.cuisineType.split(/[,/]/).map(c => c.trim()).filter(Boolean)
+        return filters.cuisineType.some(selectedCuisine => {
+          if (!selectedCuisine) return false
+          return restaurantCuisines.some(restaurantCuisine => {
+            if (selectedCuisine.toLowerCase() === restaurantCuisine.toLowerCase()) {
+              return true
+            }
+            return areSimilar(selectedCuisine, restaurantCuisine)
+          })
+        })
+      })
+    }
+    
+    // Further filter by selected neighborhoods if any
+    if (filters.neighborhood && filters.neighborhood.length > 0) {
+      filteredRecommendations = filteredRecommendations.filter(r => {
+        if (!r.neighborhood) return false
+        const restaurantNeighborhoods = r.neighborhood.split(/[,/]/).map(n => n.trim()).filter(Boolean)
+        return filters.neighborhood.some(selectedNeighborhood => {
+          if (!selectedNeighborhood) return false
+          return restaurantNeighborhoods.some(restaurantNeighborhood => {
+            if (selectedNeighborhood.toLowerCase() === restaurantNeighborhood.toLowerCase()) {
+              return true
+            }
+            return areSimilar(selectedNeighborhood, restaurantNeighborhood)
+          })
+        })
+      })
+    }
+    
+    // Extract unique price ranges
+    const uniquePriceRanges = [...new Set(filteredRecommendations.map(r => r.priceRange).filter(Boolean))].sort()
+    
+    // Sort price ranges logically: $, $$, $$$, $$$$
+    return uniquePriceRanges.sort((a, b) => {
+      const aCount = (a.match(/\$/g) || []).length
+      const bCount = (b.match(/\$/g) || []).length
+      return aCount - bCount
+    })
+  }, [allRecommendations, filters.city, filters.cuisineType, filters.neighborhood])
+
+
   return (
     <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 relative z-10">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -127,7 +210,7 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
           </div>
         )}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-5 relative">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-5 relative">
         {/* City Filter */}
         <div>
           <label htmlFor="city-filter" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1.5 sm:mb-2">
@@ -192,6 +275,19 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
           />
         </div>
 
+        {/* Price Range Filter - Multi-select */}
+        <div>
+          <MultiSelect
+            id="price-range-filter"
+            label="Price Range"
+            options={priceRanges}
+            selectedValues={filters.priceRange || []}
+            onChange={(values) => onFilterChange('priceRange', values)}
+            placeholder="All Prices"
+          />
+        </div>
+
+
         {/* Reservation Needed Filter */}
         <div>
           <label htmlFor="reservation-filter" className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1.5 sm:mb-2">
@@ -211,6 +307,7 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
             ))}
           </select>
         </div>
+
       </div>
     </div>
   )

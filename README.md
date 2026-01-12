@@ -29,6 +29,48 @@ A lightweight React application for filtering and viewing restaurant recommendat
    npm run build
    ```
 
+## Development: Vite Hot Module Replacement (HMR)
+
+This project uses Vite's Hot Module Replacement for fast development. If changes don't appear in the browser automatically:
+
+### Automatic Reload
+
+After making code changes:
+1. **Save the file** - Ensure all changes are saved
+2. **Wait 2-3 seconds** - Vite should automatically detect changes and reload
+3. **Check browser** - Changes should appear automatically
+4. **If changes don't appear** - Try a hard refresh:
+   - Mac: `Cmd + Shift + R`
+   - Windows/Linux: `Ctrl + Shift + R`
+
+### Force Reload Script
+
+If HMR consistently fails to detect changes, you can force a reload:
+
+```bash
+node .cursor/rules/vite-hmr-reload/force-reload.js
+```
+
+This script touches `vite.config.js` to trigger Vite's file watcher.
+
+### Troubleshooting HMR
+
+If Hot Module Replacement isn't working:
+
+1. **Check dev server is running** - Ensure `npm run dev` is active
+2. **Verify Vite connection** - Check browser console for `[vite] connected.` message
+3. **Check for errors** - Look for compilation errors in the terminal
+4. **Restart dev server** - Stop (`Ctrl+C`) and restart with `npm run dev`
+5. **Clear browser cache** - Hard refresh or clear cache and reload
+
+### Vite Configuration
+
+The project includes optimized HMR settings in `vite.config.js`:
+- Error overlay enabled for better debugging
+- File watching configured for reliable change detection
+
+For more details, see `.cursor/rules/vite-hmr-reload/RULE.md`
+
 ## Admin Upload Portal
 
 Access the admin portal at `/admin` to upload restaurant data:

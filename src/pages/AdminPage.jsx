@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import AdminLogin from '../components/AdminLogin'
 import AdminUpload from '../components/AdminUpload'
 import SupportInbox from '../components/SupportInbox'
+import DataPreview from '../components/DataPreview'
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('upload') // 'upload' or 'inbox'
+  const [activeTab, setActiveTab] = useState('upload') // 'upload', 'preview', or 'inbox'
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
@@ -81,6 +82,24 @@ export default function AdminPage() {
               )}
             </button>
             <button
+              onClick={() => setActiveTab('preview')}
+              className={`px-6 py-4 font-medium transition-colors relative ${
+                activeTab === 'preview'
+                  ? 'text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Preview Data
+              </div>
+              {activeTab === 'preview' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('inbox')}
               className={`px-6 py-4 font-medium transition-colors relative ${
                 activeTab === 'inbox'
@@ -108,7 +127,9 @@ export default function AdminPage() {
       </div>
 
       {/* Content */}
-      {activeTab === 'upload' ? <AdminUpload /> : <SupportInbox />}
+      {activeTab === 'upload' && <AdminUpload />}
+      {activeTab === 'preview' && <DataPreview />}
+      {activeTab === 'inbox' && <SupportInbox />}
     </div>
   )
 }
