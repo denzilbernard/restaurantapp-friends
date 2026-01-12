@@ -9,22 +9,39 @@ const __dirname = path.dirname(__filename)
 // Cache file path - stores previously looked up addresses
 const CACHE_FILE_PATH = path.join(__dirname, 'address-cache.json')
 
-// In-memory cache loaded from file
+// Check if we're in a serverless environment (Vercel, etc.)
+const IS_SERVERLESS = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || !fs.existsSync || typeof fs.existsSync !== 'function'
+
+// In-memory cache (works in all environments)
 let addressCache = {}
 
 /**
- * Initialize the cache by loading from file
+ * Initialize the cache by loading from file (if available)
+ * In serverless environments, this will just initialize an empty cache
  */
 export function initCache() {
+  // In serverless environments, skip file operations
+  if (IS_SERVERLESS) {
+    console.log('Running in serverless environment - using in-memory cache only')
+    addressCache = {}
+    return
+  }
+
   try {
-    if (fs.existsSync(CACHE_FILE_PATH)) {
+    if (fs.existsSync && fs.existsSync(CACHE_FILE_PATH)) {
       const data = fs.readFileSync(CACHE_FILE_PATH, 'utf-8')
       addressCache = JSON.parse(data)
       console.log(`Loaded ${Object.keys(addressCache).length} cached addresses from file`)
     } else {
-      // Create empty cache file
-      fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify({}, null, 2))
-      console.log('Created new address cache file')
+      // Create empty cache file (only if file system is available)
+      try {
+        fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify({}, null, 2))
+        console.log('Created new address cache file')
+      } catch (writeError) {
+        // File system might be read-only, just use in-memory cache
+        console.log('Could not create cache file, using in-memory cache only')
+        addressCache = {}
+      }
     }
   } catch (error) {
     console.error('Error initializing cache:', error)
@@ -33,13 +50,22 @@ export function initCache() {
 }
 
 /**
- * Save the cache to file
+ * Save the cache to file (if file system is available)
+ * In serverless environments, this is a no-op
  */
 function saveCache() {
+  // Skip file operations in serverless environments
+  if (IS_SERVERLESS) {
+    return
+  }
+
   try {
-    fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(addressCache, null, 2))
+    if (fs.writeFileSync) {
+      fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(addressCache, null, 2))
+    }
   } catch (error) {
-    console.error('Error saving cache:', error)
+    // File system might be read-only or unavailable
+    console.warn('Could not save cache to file (using in-memory cache only):', error.message)
   }
 }
 

@@ -200,7 +200,9 @@ export function useSheetData() {
         } else {
           // Try loading from local CSV file
           try {
-            const csvResponse = await fetch('/sample-restaurants.csv')
+            // Add cache-busting query parameter to ensure fresh data
+            const cacheBuster = `?v=${Date.now()}`
+            const csvResponse = await fetch(`/sample-restaurants.csv${cacheBuster}`)
             if (csvResponse.ok) {
               const csvText = await csvResponse.text()
               
