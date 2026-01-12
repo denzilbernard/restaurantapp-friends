@@ -51,7 +51,16 @@ function App() {
     if (!restaurants || !Array.isArray(restaurants)) {
       return []
     }
-    return groupRestaurantsByName(restaurants)
+    const grouped = groupRestaurantsByName(restaurants)
+    // Debug: Log grouping results
+    console.log(`📊 Grouped ${restaurants.length} restaurants into ${grouped.length} groups`)
+    if (grouped.length !== restaurants.length) {
+      console.warn('⚠️ Some restaurants were grouped together. Groups:', grouped.map(g => ({
+        name: g.name,
+        count: g.recommendations.length
+      })))
+    }
+    return grouped
   }, [restaurants])
 
   // Filter restaurants based on current filters

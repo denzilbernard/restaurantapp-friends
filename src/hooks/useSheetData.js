@@ -218,10 +218,14 @@ export function useSheetData() {
               restaurants = csvData.data
                 .map((row, index) => parseRestaurantRow(row, index))
                 .filter(restaurant => restaurant.name.trim() !== '')
+              
+              // Debug: Log how many restaurants were loaded from CSV
+              console.log(`✅ Loaded ${restaurants.length} restaurants from CSV file`)
+              console.log('Restaurant names:', restaurants.map(r => r.name))
             }
           } catch (csvError) {
             // If local CSV fetch fails, continue to fallback options
-            console.log('Local CSV not available, using fallback data')
+            console.log('Local CSV not available, using fallback data', csvError)
           }
 
           // If no restaurants loaded yet, try fallback options
