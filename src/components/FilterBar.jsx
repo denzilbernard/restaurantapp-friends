@@ -3,7 +3,7 @@ import { normalizeCity } from '../utils/cityNormalizer'
 import { deduplicateSimilar, areSimilar } from '../utils/deduplicateSimilar'
 import MultiSelect from './MultiSelect'
 
-export default function FilterBar({ restaurants, filters, onFilterChange, filteredCount, totalCount }) {
+export default function FilterBar({ restaurants, filters, onFilterChange, onReset, filteredCount, totalCount }) {
   // Flatten grouped restaurants to get all individual recommendations
   const allRecommendations = useMemo(() => {
     return restaurants.flatMap(group => group.recommendations || [group])
@@ -217,6 +217,17 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
     })
   }, [allRecommendations, filters.city, filters.cuisineType, filters.neighborhood])
 
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      (filters.name && filters.name !== '') ||
+      (filters.city && filters.city.length > 0) ||
+      (filters.neighborhood && filters.neighborhood.length > 0) ||
+      (filters.cuisineType && filters.cuisineType.length > 0) ||
+      (filters.reservationNeeded && filters.reservationNeeded !== '') ||
+      (filters.priceRange && filters.priceRange.length > 0)
+    )
+  }, [filters])
 
   return (
     <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 relative z-10">
@@ -225,15 +236,26 @@ export default function FilterBar({ restaurants, filters, onFilterChange, filter
           <span className="text-xl sm:text-2xl">🔍</span>
           Find Your Perfect Spot
         </h2>
-        {filteredCount !== undefined && totalCount !== undefined && (
-          <div className="glass-card inline-block px-3 sm:px-5 py-2 sm:py-2.5 rounded-full shrink-0 self-start sm:self-auto text-sm sm:text-base">
-            <span className="text-gray-600">Showing </span>
-            <span className="text-amber-600 font-bold">{filteredCount}</span>
-            <span className="text-gray-600"> of </span>
-            <span className="text-amber-600 font-bold">{totalCount}</span>
-            <span className="text-gray-600 hidden xs:inline"> restaurants</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {hasActiveFilters && onReset && (
+            <button
+              onClick={onReset}
+              className="glass-card px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shrink-0 text-sm sm:text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-white/90 transition-all border border-white/50 hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 touch-target"
+              aria-label="Reset all filters"
+            >
+              Reset Filters
+            </button>
+          )}
+          {filteredCount !== undefined && totalCount !== undefined && (
+            <div className="glass-card inline-block px-3 sm:px-5 py-2 sm:py-2.5 rounded-full shrink-0 self-start sm:self-auto text-sm sm:text-base">
+              <span className="text-gray-600">Showing </span>
+              <span className="text-amber-600 font-bold">{filteredCount}</span>
+              <span className="text-gray-600"> of </span>
+              <span className="text-amber-600 font-bold">{totalCount}</span>
+              <span className="text-gray-600 hidden xs:inline"> restaurants</span>
+            </div>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-5 relative">
         {/* City Filter - Multi-select */}
