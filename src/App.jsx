@@ -284,6 +284,17 @@ function App() {
     setSelectedRestaurant(null)
   }
 
+  const handleResetFilters = () => {
+    setFilters({
+      name: '',
+      city: [],
+      neighborhood: [],
+      cuisineType: [],
+      reservationNeeded: '',
+      priceRange: [],
+    })
+  }
+
   return (
     <div className="min-h-screen landscape-bg">
       {/* Decorative sun glow */}
@@ -344,6 +355,7 @@ function App() {
                 restaurants={groupedRestaurants}
                 filters={filters}
                 onFilterChange={handleFilterChange}
+                onReset={handleResetFilters}
                 filteredCount={filteredRestaurants.length}
                 totalCount={groupedRestaurants.length}
               />
