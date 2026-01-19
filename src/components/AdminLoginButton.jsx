@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 // Simple admin password - in production, use proper authentication
 const ADMIN_PASSWORD = 'admin123'
 
-export default function AdminLoginButton() {
+export default function AdminLoginButton({ isModalOpen = false }) {
   const [isOpen, setIsOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -40,11 +40,13 @@ export default function AdminLoginButton() {
   return (
     <>
       {/* Admin Login Button - Top Right with safe area */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed top-3 sm:top-6 right-3 sm:right-6 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/80 hover:bg-white active:bg-gray-100 backdrop-blur-md text-gray-700 hover:text-gray-900 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-1.5 sm:gap-2 z-40 group border border-white/50 safe-area-top touch-target"
-        aria-label="Admin login"
-      >
+      {/* Hide button when restaurant modal is open to prevent blocking X button on mobile */}
+      {!isModalOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed top-3 sm:top-6 right-3 sm:right-6 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/80 hover:bg-white active:bg-gray-100 backdrop-blur-md text-gray-700 hover:text-gray-900 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-1.5 sm:gap-2 z-40 group border border-white/50 safe-area-top touch-target"
+          aria-label="Admin login"
+        >
         <svg 
           className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:scale-110 text-amber-600" 
           fill="none" 
@@ -58,8 +60,9 @@ export default function AdminLoginButton() {
             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
           />
         </svg>
-        <span className="text-xs sm:text-sm font-medium">Admin</span>
-      </button>
+          <span className="text-xs sm:text-sm font-medium">Admin</span>
+        </button>
+      )}
 
       {/* Modal Backdrop */}
       {isOpen && (

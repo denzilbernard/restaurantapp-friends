@@ -379,7 +379,7 @@ function App() {
       <SupportButton />
 
       {/* Admin Login Button - Top Right */}
-      <AdminLoginButton />
+      <AdminLoginButton isModalOpen={isModalOpen} />
     </div>
   )
 }
