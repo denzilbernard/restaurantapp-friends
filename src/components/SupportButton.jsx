@@ -74,7 +74,7 @@ export default function SupportButton() {
         aria-label="Open support form"
       >
         <svg 
-          className="w-7 h-7 transition-transform group-hover:scale-110" 
+          className="w-7 h-7 transition-transform group-hover:scale-110 block mx-auto my-auto" 
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"

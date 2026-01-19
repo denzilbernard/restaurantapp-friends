@@ -40,11 +40,15 @@ export default function AdminLoginButton({ isModalOpen = false }) {
   return (
     <>
       {/* Admin Login Button - Top Right with safe area */}
-      {/* Hide button when restaurant modal is open to prevent blocking X button on mobile */}
+      {/* Hide button when restaurant modal/card is open */}
       {!isModalOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed top-3 sm:top-6 right-3 sm:right-6 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/80 hover:bg-white active:bg-gray-100 backdrop-blur-md text-gray-700 hover:text-gray-900 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-1.5 sm:gap-2 z-40 group border border-white/50 safe-area-top touch-target"
+          className="fixed top-4 right-4 sm:top-6 sm:right-6 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 hover:bg-white active:bg-gray-100 backdrop-blur-md text-gray-700 hover:text-gray-900 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-1.5 sm:gap-2 z-50 group border border-white/50 touch-target"
+          style={{
+            top: 'max(1rem, env(safe-area-inset-top, 1rem))',
+            right: 'max(1rem, env(safe-area-inset-right, 1rem))'
+          }}
           aria-label="Admin login"
         >
         <svg 
@@ -67,7 +71,7 @@ export default function AdminLoginButton({ isModalOpen = false }) {
       {/* Modal Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={handleClose}
         >
           {/* Modal Content */}
