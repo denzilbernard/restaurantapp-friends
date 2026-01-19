@@ -3,12 +3,12 @@ export default function CuisineWarningModal({ isOpen, onClose, city, missingCuis
 
   return (
     <div 
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 sm:p-4 safe-area-bottom"
       onClick={onClose}
     >
       {/* Modal Content */}
       <div 
-        className="glass-card rounded-t-2xl sm:rounded-3xl shadow-2xl max-w-md w-full modal-content"
+        className="glass-card rounded-t-2xl sm:rounded-3xl shadow-2xl max-w-md w-full max-h-[calc(100vh-2rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

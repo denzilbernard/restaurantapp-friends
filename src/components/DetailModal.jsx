@@ -206,15 +206,15 @@ export default function DetailModal({ restaurant, isOpen, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 sm:p-4 safe-area-bottom"
       onClick={onClose}
     >
       <div
-        className="glass-card rounded-t-2xl sm:rounded-3xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain modal-content"
+        className="glass-card rounded-t-2xl sm:rounded-3xl shadow-2xl max-w-3xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain modal-content flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200/50 px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-start z-10 rounded-t-2xl sm:rounded-t-3xl">
-          <div className="flex-1 pr-2">
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200/50 px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-start z-10 rounded-t-2xl sm:rounded-t-3xl flex-shrink-0 safe-area-top">
+          <div className="flex-1 pr-2 min-w-0">
             {restaurant.cuisineType && (
               <div className="mb-1 sm:mb-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-500">
@@ -223,11 +223,11 @@ export default function DetailModal({ restaurant, isOpen, onClose }) {
                 </span>
               </div>
             )}
-            <h2 className="heading-elegant text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 leading-tight">{restaurant.name}</h2>
+            <h2 className="heading-elegant text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 leading-tight break-words">{restaurant.name}</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-3 sm:p-2 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-400 hover:text-gray-600 transition-all touch-target flex-shrink-0"
+            className="p-3 sm:p-2 hover:bg-gray-100 active:bg-gray-200 rounded-full text-gray-400 hover:text-gray-600 transition-all touch-target flex-shrink-0 ml-2"
             aria-label="Close"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
