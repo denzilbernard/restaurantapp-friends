@@ -75,11 +75,13 @@ For more details, see `.cursor/rules/vite-hmr-reload/RULE.md`
 
 Access the admin portal at `/admin` to upload restaurant data:
 
-1. Navigate to `http://localhost:5173/admin`
+1. Navigate to `http://localhost:5173/admin` (or your production URL `/admin`)
 2. Login with the admin password (see below)
 3. Drag and drop your CSV file or click to browse
 4. Preview the parsed data
-5. Click "Save to App" to load the data
+5. Click "Upload to Live App" to update the production site
+
+**When you upload via the admin page, the data is stored on the server and immediately visible to ALL users** - no redeployment needed!
 
 ### Admin Password
 
@@ -90,6 +92,25 @@ To change the admin password, edit `src/components/AdminLogin.jsx` and update th
 ```javascript
 const ADMIN_PASSWORD = 'your-new-password-here'
 ```
+
+### Production Setup: Vercel Blob Storage
+
+For the admin CSV upload to work in production (on Vercel), you need to set up Blob Storage:
+
+1. **Enable Blob Storage in your Vercel project:**
+   - Go to your project in the Vercel dashboard
+   - Navigate to **Storage** tab
+   - Click **Create Database** and select **Blob**
+   - Follow the prompts to create a new Blob store
+
+2. **The `BLOB_READ_WRITE_TOKEN` will be automatically added to your environment variables**
+
+3. **(Optional) Add an admin token for extra security:**
+   - In Vercel Dashboard, go to **Settings > Environment Variables**
+   - Add `ADMIN_UPLOAD_TOKEN` with a secure random string
+   - Add `VITE_ADMIN_UPLOAD_TOKEN` with the same value (for the frontend)
+
+4. **Redeploy your application** to pick up the new environment variables
 
 ## CSV Format
 
@@ -111,9 +132,16 @@ A sample CSV file is included: `sample-restaurants.csv`
 
 ## Data Sources (Priority Order)
 
-1. **Uploaded CSV data** - Data uploaded via admin portal (stored in localStorage)
-2. **Dummy data** - Built-in sample data for development
-3. **Google Sheets** - Optional: Configure in `useSheetData.js`
+The app loads data in this order:
+
+1. **localStorage** - For immediate display after admin upload (same browser session)
+2. **Server API (Vercel Blob Storage)** - Production data visible to all users
+3. **Static CSV file** - Fallback `sample-restaurants.csv` included in the build
+4. **Dummy data** - Built-in sample data for development
+
+When you upload via the admin portal, the data is:
+- Saved to Vercel Blob Storage (visible to all users immediately)
+- Also saved to localStorage (for instant local display)
 
 ## Google Sheets (Optional)
 

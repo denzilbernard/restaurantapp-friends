@@ -191,41 +191,61 @@ export function useSheetData() {
 
         let restaurants = []
 
-        // First, check for uploaded data in localStorage
+        // First, check for uploaded data in localStorage (for immediate updates after admin upload)
         const uploadedData = getUploadedData()
         if (uploadedData) {
           // Small delay for smooth transition
           await new Promise(resolve => setTimeout(resolve, 300))
           restaurants = uploadedData
+          console.log(`✅ Loaded ${restaurants.length} restaurants from localStorage`)
         } else {
-          // Try loading from local CSV file
+          // Try fetching from server API first (production data)
           try {
-            // Add cache-busting query parameter to ensure fresh data
-            const cacheBuster = `?v=${Date.now()}`
-            const csvResponse = await fetch(`/sample-restaurants.csv${cacheBuster}`)
-            if (csvResponse.ok) {
-              const csvText = await csvResponse.text()
-              
-              const csvData = await new Promise((resolve, reject) => {
-                Papa.parse(csvText, {
-                  header: true,
-                  skipEmptyLines: true,
-                  complete: (results) => resolve(results),
-                  error: (error) => reject(error)
-                })
-              })
-              
-              restaurants = csvData.data
-                .map((row, index) => parseRestaurantRow(row, index))
-                .filter(restaurant => restaurant.name.trim() !== '')
-              
-              // Debug: Log how many restaurants were loaded from CSV
-              console.log(`✅ Loaded ${restaurants.length} restaurants from CSV file`)
-              console.log('Restaurant names:', restaurants.map(r => r.name))
+            const apiResponse = await fetch('/api/restaurants')
+            if (apiResponse.ok) {
+              const apiData = await apiResponse.json()
+              if (apiData.status === 'success' && apiData.restaurants && apiData.restaurants.length > 0) {
+                restaurants = apiData.restaurants.map((r, index) => ({
+                  ...r,
+                  id: r.id || index,
+                  city: normalizeCity(r.city || '')
+                }))
+                console.log(`✅ Loaded ${restaurants.length} restaurants from server API`)
+              }
             }
-          } catch (csvError) {
-            // If local CSV fetch fails, continue to fallback options
-            console.log('Local CSV not available, using fallback data', csvError)
+          } catch (apiError) {
+            console.log('Server API not available, trying fallback:', apiError)
+          }
+
+          // If no data from API, try loading from local CSV file
+          if (restaurants.length === 0) {
+            try {
+              // Add cache-busting query parameter to ensure fresh data
+              const cacheBuster = `?v=${Date.now()}`
+              const csvResponse = await fetch(`/sample-restaurants.csv${cacheBuster}`)
+              if (csvResponse.ok) {
+                const csvText = await csvResponse.text()
+                
+                const csvData = await new Promise((resolve, reject) => {
+                  Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => resolve(results),
+                    error: (error) => reject(error)
+                  })
+                })
+                
+                restaurants = csvData.data
+                  .map((row, index) => parseRestaurantRow(row, index))
+                  .filter(restaurant => restaurant.name.trim() !== '')
+                
+                // Debug: Log how many restaurants were loaded from CSV
+                console.log(`✅ Loaded ${restaurants.length} restaurants from CSV file`)
+              }
+            } catch (csvError) {
+              // If local CSV fetch fails, continue to fallback options
+              console.log('Local CSV not available, using fallback data', csvError)
+            }
           }
 
           // If no restaurants loaded yet, try fallback options
@@ -234,6 +254,7 @@ export function useSheetData() {
               // Simulate a small loading delay for realism
               await new Promise(resolve => setTimeout(resolve, 500))
               restaurants = DUMMY_DATA
+              console.log(`✅ Loaded ${restaurants.length} restaurants from dummy data`)
             } else {
               // Otherwise, try fetching from Google Sheets
               const response = await fetch(GOOGLE_SHEET_CSV_URL)

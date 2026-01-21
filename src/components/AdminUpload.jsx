@@ -97,8 +97,10 @@ export default function AdminUpload() {
   const [existingCount, setExistingCount] = useState(0)
   const [detectedColumns, setDetectedColumns] = useState([])
   const [csvFileInfo, setCsvFileInfo] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [serverDataInfo, setServerDataInfo] = useState(null)
 
-  // Check for existing data and load CSV file info on mount
+  // Check for existing data and load server/CSV file info on mount
   useEffect(() => {
     const existing = localStorage.getItem('restaurantData')
     if (existing) {
@@ -109,6 +111,22 @@ export default function AdminUpload() {
         console.error('Error parsing existing data:', e)
       }
     }
+
+    // Fetch current server data info
+    fetch('/api/restaurants')
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success' && data.count > 0) {
+          setServerDataInfo({
+            count: data.count,
+            updatedAt: data.updatedAt,
+            source: data.source
+          })
+        }
+      })
+      .catch(err => {
+        console.log('Could not fetch server data info:', err)
+      })
 
     // Load CSV file info
     fetch('/sample-restaurants.csv')
@@ -132,7 +150,7 @@ export default function AdminUpload() {
               fileName: 'sample-restaurants.csv',
               restaurantCount: restaurantCount,
               totalRows: results.data.length,
-              lastUpdated: 'Built-in CSV file'
+              lastUpdated: 'Built-in CSV file (fallback)'
             })
           },
           error: (error) => {
@@ -217,18 +235,51 @@ export default function AdminUpload() {
     handleFile(file)
   }, [handleFile])
 
-  const handleSaveData = () => {
+  const handleSaveData = async () => {
+    setIsUploading(true)
+    setError(null)
+    
     try {
+      // Upload to server API for production deployment
+      const response = await fetch('/api/restaurants/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          restaurants: parsedData,
+          // Admin token from environment (if configured)
+          adminToken: import.meta.env.VITE_ADMIN_UPLOAD_TOKEN || ''
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || result.status === 'error') {
+        throw new Error(result.error || 'Failed to upload data to server')
+      }
+
+      // Also save to localStorage for immediate local display
       localStorage.setItem('restaurantData', JSON.stringify(parsedData))
       localStorage.setItem('restaurantDataUpdatedAt', new Date().toISOString())
       
       // Dispatch custom event to notify useSheetData hook to refresh
       window.dispatchEvent(new Event('restaurantDataUpdated'))
       
+      // Update server data info
+      setServerDataInfo({
+        count: result.count,
+        updatedAt: result.updatedAt,
+        source: 'blob'
+      })
+      
       setSuccess(true)
       setExistingCount(parsedData.length)
     } catch (err) {
+      console.error('Upload error:', err)
       setError(`Error saving data: ${err.message}`)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -287,13 +338,34 @@ export default function AdminUpload() {
           </div>
         </header>
 
+        {/* Server Data Status Banner */}
+        {serverDataInfo && serverDataInfo.count > 0 && (
+          <div className="bg-purple-900/50 border border-purple-700 rounded-lg p-4 mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-purple-200 font-medium mb-1">
+                  🌐 Live Server Data
+                </p>
+                <div className="text-purple-300 text-sm space-y-1">
+                  <p><span className="font-medium">Restaurants:</span> {serverDataInfo.count}</p>
+                  <p><span className="font-medium">Last Updated:</span> {new Date(serverDataInfo.updatedAt).toLocaleString()}</p>
+                  <p><span className="font-medium">Status:</span> <span className="text-green-400">Active - visible to all users</span></p>
+                </div>
+              </div>
+              <div className="text-purple-400 text-xs max-w-xs">
+                This data is stored on the server and visible to everyone using the app
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* CSV File Info Banner */}
-        {csvFileInfo && (
+        {csvFileInfo && !serverDataInfo?.count && (
           <div className="bg-emerald-900/50 border border-emerald-700 rounded-lg p-4 mb-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <p className="text-emerald-200 font-medium mb-1">
-                  📄 Current CSV File
+                  📄 Fallback CSV File
                 </p>
                 <div className="text-emerald-300 text-sm space-y-1">
                   <p><span className="font-medium">File:</span> {csvFileInfo.fileName}</p>
@@ -302,7 +374,7 @@ export default function AdminUpload() {
                 </div>
               </div>
               <div className="text-emerald-400 text-xs">
-                This is the CSV file that loads when no data is uploaded via localStorage
+                Upload a CSV to update the live app for all users
               </div>
             </div>
           </div>
@@ -411,10 +483,13 @@ export default function AdminUpload() {
         {/* Success Message */}
         {success && (
           <div className="mt-6 bg-emerald-900/50 border border-emerald-700 rounded-lg p-4">
-            <p className="text-emerald-300 font-medium">Success!</p>
+            <p className="text-emerald-300 font-medium">Successfully Uploaded to Live App!</p>
             <p className="text-emerald-200 text-sm mt-1">
-              {parsedData.length} restaurants saved successfully. 
+              {parsedData.length} restaurants are now live and visible to all users. 
               <a href="/" className="underline ml-1 hover:text-white">View the app</a>
+            </p>
+            <p className="text-emerald-400 text-xs mt-2">
+              No deployment needed - changes are immediately available to everyone.
             </p>
           </div>
         )}
@@ -428,9 +503,29 @@ export default function AdminUpload() {
               </h2>
               <button
                 onClick={handleSaveData}
-                className="px-6 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                disabled={isUploading}
+                className={`px-6 py-2 text-white font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                  isUploading 
+                    ? 'bg-emerald-700 cursor-not-allowed' 
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
               >
-                Save to App
+                {isUploading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    Uploading to Server...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Upload to Live App
+                  </>
+                )}
               </button>
             </div>
 
