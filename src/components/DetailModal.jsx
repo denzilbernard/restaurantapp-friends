@@ -206,14 +206,14 @@ export default function DetailModal({ restaurant, isOpen, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 sm:p-4 safe-area-bottom"
+      className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4 sm:p-6 safe-area-bottom"
       onClick={onClose}
     >
       <div
-        className="glass-card rounded-t-2xl sm:rounded-3xl shadow-2xl max-w-3xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain modal-content flex flex-col"
+        className="glass-card rounded-2xl sm:rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] sm:max-h-[85vh] overflow-hidden overscroll-contain modal-content flex flex-col animate-modal-pop"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200/50 px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-start z-10 rounded-t-2xl sm:rounded-t-3xl flex-shrink-0 safe-area-top">
+        <div className="sticky top-0 bg-white/98 backdrop-blur-lg border-b border-gray-200/50 px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-start z-20 rounded-t-2xl sm:rounded-t-3xl flex-shrink-0 shadow-sm">
           <div className="flex-1 pr-2 min-w-0">
             {restaurant.cuisineType && (
               <div className="mb-1 sm:mb-2">
@@ -236,7 +236,7 @@ export default function DetailModal({ restaurant, isOpen, onClose }) {
           </button>
         </div>
 
-        <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 pb-8 sm:pb-8">
+        <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 pb-8 sm:pb-8 overflow-y-auto flex-1 overscroll-contain">
           {/* City, Neighborhood and Cuisine Tags */}
           <div className="flex flex-wrap gap-2">
             {restaurant.neighborhood && (
