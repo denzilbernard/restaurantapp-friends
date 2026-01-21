@@ -17,6 +17,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Cache files (may contain sensitive data)
+server/address-cache.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,4 +30,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
 

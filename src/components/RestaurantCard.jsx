@@ -61,13 +61,13 @@ export default function RestaurantCard({ restaurant, recommendations, onClick })
       onClick={() => onClick(currentRestaurant)}
       className="glass-card rounded-xl sm:rounded-2xl hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden relative group active:scale-[0.99] sm:hover:-translate-y-1"
     >
-      {/* Close Button - Floating X */}
+      {/* Close Button - Floating X - Top Right */}
       <button
         onClick={(e) => {
           e.stopPropagation()
           // Handle close action - you can add onClose prop if needed
         }}
-        className="absolute top-2 sm:top-3 left-2 sm:left-3 z-20 bg-white/95 hover:bg-white active:bg-gray-100 rounded-full p-2 sm:p-2.5 shadow-lg transition-all hover:scale-110 backdrop-blur-sm touch-target"
+        className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20 bg-white/95 hover:bg-white active:bg-gray-100 rounded-full p-2 sm:p-2.5 shadow-lg transition-all hover:scale-110 backdrop-blur-sm touch-target"
         aria-label="Close"
       >
         <svg className="w-5 h-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -99,9 +99,9 @@ export default function RestaurantCard({ restaurant, recommendations, onClick })
         </>
       )}
 
-      {/* Recommendation Indicator */}
+      {/* Recommendation Indicator - Positioned below X button when multiple recommendations exist */}
       {hasMultipleRecommendations && (
-        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-md">
+        <div className="absolute top-12 sm:top-14 right-2 sm:right-3 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-md">
           {currentIndex + 1} / {restaurantGroup.recommendations.length}
         </div>
       )}
